@@ -30,7 +30,8 @@ async function loadDetector(): Promise<DetectFn> {
         dtype: 'fp32',
         progress_callback: (progress) => {
           if (progress.status === 'progress' && progress.file) {
-            const percent = progress.total && progress.total > 0
+            const percent =
+              progress.total && progress.total > 0
                 ? Math.round((progress.loaded / progress.total) * 100)
                 : null;
             post({
@@ -51,18 +52,24 @@ async function loadDetector(): Promise<DetectFn> {
 }
 
 async function runDetection(
-  bitmap: ImageBitmap,
+  frame: VideoFrame,
   threshold: number,
 ): Promise<ObjectDetectionOutput> {
   const detect = await loadDetector();
-  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-  const ctx = canvas.getContext('2d');
+  const width = frame.displayWidth;
+  const height = frame.displayHeight;
+  const canvas = new OffscreenCanvas(width, height);
+  const ctx = canvas.getContext('2d', {willReadFrequently: true});
   if (!ctx) {
+    frame.close();
     throw new Error('OffscreenCanvas 2D context not available in worker');
   }
 
-  ctx.drawImage(bitmap, 0, 0);
-  bitmap.close();
+  try {
+    ctx.drawImage(frame, 0, 0, width, height);
+  } finally {
+    frame.close();
+  }
 
   return detect(canvas, {threshold, percentage: true});
 }
@@ -78,13 +85,13 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     }
 
     if (message.type === 'detect') {
-      const results = await runDetection(message.bitmap, message.threshold);
+      const results = await runDetection(message.frame, message.threshold);
       post({type: 'detect-result', id: message.id, results});
       return;
     }
   } catch (error) {
     if (message.type === 'detect') {
-      message.bitmap.close();
+      message.frame.close();
     }
 
     post({

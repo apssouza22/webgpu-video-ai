@@ -1,4 +1,3 @@
-import {DetectionController} from './detection/DetectionController';
 import {ObjectDetector} from './detection/ObjectDetector';
 import {CompositionPlayer} from './player/CompositionPlayer';
 import {DEMO_COMPOSITION} from './composition';
@@ -8,7 +7,6 @@ const playerEl = document.getElementById('player');
 const detectionToggle = document.getElementById('detection-enabled') as HTMLInputElement | null;
 const thresholdSlider = document.getElementById('detection-threshold') as HTMLInputElement | null;
 const thresholdValue = document.getElementById('detection-threshold-value');
-const allowedLabelsInput = document.getElementById('detection-labels') as HTMLInputElement | null;
 const detectionFps = document.getElementById('detection-fps');
 
 function setStatus(message: string): void {
@@ -35,28 +33,24 @@ async function verifySamples(): Promise<void> {
   }
 }
 
-function wireDetectionControls(
-  player: CompositionPlayer,
-  detection: DetectionController,
-): void {
+function wireDetectionControls(player: CompositionPlayer): void {
+  const videoPlayer = player.getVideoPlayer();
+
   detectionToggle?.addEventListener('change', () => {
-    detection.setEnabled(detectionToggle.checked);
+    videoPlayer.setDetectionEnabled(detectionToggle.checked);
     if (detectionToggle.checked) {
-      void detection.processFrame(player.getVideoCanvas());
+      void player.refreshFrame();
     }
   });
 
   thresholdSlider?.addEventListener('input', () => {
     const threshold = Number(thresholdSlider.value);
-    detection.setThreshold(threshold);
+    videoPlayer.setDetectionThreshold(threshold);
     if (thresholdValue) {
       thresholdValue.textContent = threshold.toFixed(2);
     }
   });
 
-  allowedLabelsInput?.addEventListener('input', () => {
-    detection.setAllowedLabels(allowedLabelsInput.value);
-  });
 }
 
 async function main(): Promise<void> {
@@ -67,39 +61,34 @@ async function main(): Promise<void> {
     throw new Error('Missing player markup');
   }
 
-  setStatus('Loading RF-DETR object detection model (WebGPU)…');
+  setStatus('Loading RF-DETR object detection model (WebGPU worker)…');
   const detector = await ObjectDetector.create(setStatus);
 
-  const detection = new DetectionController({
-    detector,
-    threshold: thresholdSlider ? Number(thresholdSlider.value) : 0.5,
-    onFpsUpdate: (fps) => {
-      if (detectionFps) {
-        detectionFps.textContent = `Detection FPS: ${fps.toFixed(1)}`;
-      }
-    },
-  });
-
-  if (detectionToggle) {
-    detection.setEnabled(detectionToggle.checked);
-  }
+  const threshold = thresholdSlider ? Number(thresholdSlider.value) : 0.5;
 
   setStatus('Loading preview…');
   await DEMO_COMPOSITION.loadLayerSources();
 
   const player = await CompositionPlayer.create(DEMO_COMPOSITION, playerEl, {
-    detection,
+    detection: {
+      detector,
+      threshold,
+      enabled: detectionToggle?.checked ?? true,
+      onFpsUpdate: (fps) => {
+        if (detectionFps) {
+          detectionFps.textContent = `Detection FPS: ${fps.toFixed(1)}`;
+        }
+      },
+    },
   });
 
-  wireDetectionControls(player, detection);
+  wireDetectionControls(player);
 
   setStatus('Warming up RF-DETR shaders (first inference)…');
-  const canvas = player.getVideoCanvas();
-  await detector.warmup(canvas, detection.getThreshold());
-  await detection.processFrame(canvas);
+  await player.getVideoPlayer().warmupDetection(0);
 
   setStatus(
-    'Preview ready. Play or scrub the timeline — object detection runs on each composed frame.',
+    'Preview ready. Detection runs on the decoded VideoFrame (transferred to a worker) and boxes are drawn on the GPU.',
   );
 }
 

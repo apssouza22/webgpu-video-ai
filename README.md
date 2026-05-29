@@ -65,9 +65,9 @@ const sourceFrame = await frame.videos[0]?.nextSourceFrame();
 
 ## Object detection
 
-Detection uses the same setup as the [RF-DETR WebGPU demo](https://huggingface.co/spaces/webml-community/RF-DETR-Medium-WebGPU): `onnx-community/rfdetr_medium-ONNX` via `@huggingface/transformers` with `device: 'webgpu'`. The model downloads from Hugging Face on first load (~tens of MB). Inference runs in a **dedicated Web Worker** so the main thread stays responsive during model load and per-frame detection.
+Detection uses the same setup as the [RF-DETR WebGPU demo](https://huggingface.co/spaces/webml-community/RF-DETR-Medium-WebGPU): `onnx-community/rfdetr_medium-ONNX` via `@huggingface/transformers` with `device: 'webgpu'`. The model downloads from Hugging Face on first load (~tens of MB). Inference runs in a **dedicated Web Worker** so the main thread stays responsive.
 
-Use the detection panel to toggle inference, adjust the score threshold, filter COCO labels, and view detection FPS. Each frame is copied to an `ImageBitmap` on the main thread and transferred to the worker; results are drawn on an overlay canvas. Inference uses the **composed** WebGPU output (video + image overlays), not raw source files alone.
+Each preview frame clones the decoded **`VideoFrame`** used for WebGPU composition and **transfers** it to the worker (no canvas readback). The worker draws it once into an `OffscreenCanvas` for the model. Bounding boxes are drawn in a second **WebGPU pass** in `GpuCompositor` (not a 2D overlay). Detection runs on the raw decoded video frame (before image overlays are composited), matching what the compositor samples as the base layer.
 
 ## Requirements
 

@@ -4,7 +4,7 @@ export type DetectionResult = ObjectDetectionOutput[number];
 
 export type WorkerRequest =
   | {type: 'init'}
-  | {type: 'detect'; id: number; threshold: number; bitmap: ImageBitmap};
+  | {type: 'detect'; id: number; threshold: number; frame: VideoFrame};
 
 export type WorkerResponse =
   | {type: 'status'; message: string}

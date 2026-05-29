@@ -75,20 +75,9 @@
         border-radius: 12px;
         background: #000;
       }
-      .composition-player__viewport {
-        position: relative;
-        line-height: 0;
-      }
       .composition-player__canvas {
         display: block;
         width: 100%;
-      }
-      .composition-player__detection-overlay {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
       }
       .detection-panel {
         margin: 16px 0 0;
@@ -190,7 +179,7 @@
         color: #7eb8ff;
       }
     </style>
-    <script type="module" crossorigin src="/webgpu-video-encoding/assets/index-CwWTkFMF.js"></script>
+    <script type="module" crossorigin src="/webgpu-video-encoding/assets/index-KbkeooHD.js"></script>
   </head>
   <body>
     <main>
@@ -213,7 +202,7 @@
           </li>
           <li>
             <strong>Detect objects</strong>
-            <span>RF-DETR runs on each composed frame via Transformers.js and WebGPU.</span>
+            <span>RF-DETR runs on each decoded VideoFrame in a worker; boxes are drawn in WebGPU.</span>
           </li>
           <li>
             <strong>Preview timeline</strong>
@@ -246,16 +235,6 @@
             <span id="detection-threshold-value">0.50</span>
           </label>
           <p id="detection-fps">Detection FPS: —</p>
-        </div>
-        <div class="detection-panel__row">
-          <label style="flex: 1">
-            Labels filter (optional, comma-separated COCO subset)
-            <input
-              id="detection-labels"
-              type="text"
-              placeholder="person, car, dog"
-            />
-          </label>
         </div>
       </section>
       <p id="status">Initializing…</p>

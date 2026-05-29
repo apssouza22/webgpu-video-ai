@@ -45,24 +45,23 @@ export class ObjectDetector {
     return detector;
   }
 
-  async warmup(canvas: HTMLCanvasElement, threshold = 0.5): Promise<void> {
-    await this.detect(canvas, {threshold});
+  async warmup(frame: VideoFrame, threshold = 0.5): Promise<void> {
+    await this.detect(frame, {threshold});
   }
 
   async detect(
-    canvas: HTMLCanvasElement,
+    frame: VideoFrame,
     options: {threshold: number},
   ): Promise<DetectionResult[]> {
     await this.ready;
 
-    const bitmap = await createImageBitmap(canvas);
     const id = this.nextId++;
 
     return new Promise<DetectionResult[]>((resolve, reject) => {
       this.pending.set(id, {resolve, reject});
       this.worker.postMessage(
-        {type: 'detect', id, threshold: options.threshold, bitmap} satisfies WorkerRequest,
-        [bitmap],
+        {type: 'detect', id, threshold: options.threshold, frame} satisfies WorkerRequest,
+        [frame],
       );
     });
   }
