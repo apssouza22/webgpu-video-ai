@@ -1,5 +1,6 @@
 import {ObjectDetector} from './detection/ObjectDetector';
 import {CompositionPlayer} from './player/CompositionPlayer';
+import {VideoObjectDetection} from './player/VideoObjectDetection';
 import {DEMO_COMPOSITION} from './composition';
 
 const statusEl = document.getElementById('status');
@@ -34,10 +35,13 @@ async function verifySamples(): Promise<void> {
 }
 
 function wireDetectionControls(player: CompositionPlayer): void {
-  const videoPlayer = player.getVideoPlayer();
+  const detection = player.getDetection();
+  if (!detection) {
+    return;
+  }
 
   detectionToggle?.addEventListener('change', () => {
-    videoPlayer.setDetectionEnabled(detectionToggle.checked);
+    detection.setEnabled(detectionToggle.checked);
     if (detectionToggle.checked) {
       void player.refreshFrame();
     }
@@ -45,12 +49,11 @@ function wireDetectionControls(player: CompositionPlayer): void {
 
   thresholdSlider?.addEventListener('input', () => {
     const threshold = Number(thresholdSlider.value);
-    videoPlayer.setDetectionThreshold(threshold);
+    detection.setThreshold(threshold);
     if (thresholdValue) {
       thresholdValue.textContent = threshold.toFixed(2);
     }
   });
-
 }
 
 async function main(): Promise<void> {
@@ -63,24 +66,23 @@ async function main(): Promise<void> {
 
   setStatus('Loading RF-DETR object detection model (WebGPU worker)…');
   const detector = await ObjectDetector.create(setStatus);
-
   const threshold = thresholdSlider ? Number(thresholdSlider.value) : 0.5;
+
+  const detection = new VideoObjectDetection({
+    detector,
+    threshold,
+    enabled: detectionToggle?.checked ?? true,
+    onFpsUpdate: (fps) => {
+      if (detectionFps) {
+        detectionFps.textContent = `Detection FPS: ${fps.toFixed(1)}`;
+      }
+    },
+  });
 
   setStatus('Loading preview…');
   await DEMO_COMPOSITION.loadLayerSources();
 
-  const player = await CompositionPlayer.create(DEMO_COMPOSITION, playerEl, {
-    detection: {
-      detector,
-      threshold,
-      enabled: detectionToggle?.checked ?? true,
-      onFpsUpdate: (fps) => {
-        if (detectionFps) {
-          detectionFps.textContent = `Detection FPS: ${fps.toFixed(1)}`;
-        }
-      },
-    },
-  });
+  const player = await CompositionPlayer.create(DEMO_COMPOSITION, playerEl, detection);
 
   wireDetectionControls(player);
 

@@ -10,7 +10,7 @@ export interface VideoPlayerDetectionOptions {
   onDetectionsUpdated?: () => void;
 }
 
-export class VideoPlayerDetection {
+export class VideoObjectDetection {
   private detectionVersion = 0;
   private detectionBusy = false;
   private pendingDetectionFrame: VideoFrame | null = null;
@@ -18,17 +18,19 @@ export class VideoPlayerDetection {
   private threshold: number;
   private detections: GpuDetectionBox[] = [];
   private lastDetectionAt = 0;
+  private onDetectionsUpdated?: () => void;
 
   constructor(private readonly options: VideoPlayerDetectionOptions) {
     this.enabled = options.enabled ?? true;
     this.threshold = options.threshold ?? 0.5;
+    this.onDetectionsUpdated = options.onDetectionsUpdated;
   }
 
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
     if (!enabled) {
       this.detections = [];
-      this.options.onDetectionsUpdated?.();
+      this.onDetectionsUpdated?.();
     }
   }
 
@@ -63,7 +65,7 @@ export class VideoPlayerDetection {
       return;
     }
 
-    this.runDetection(new VideoFrame(videoFrame));
+    void this.runDetection(new VideoFrame(videoFrame));
   }
 
   destroy(): void {
@@ -71,40 +73,40 @@ export class VideoPlayerDetection {
     this.pendingDetectionFrame = null;
   }
 
-  private runDetection(detectionFrame: VideoFrame): void {
+  private async runDetection(detectionFrame: VideoFrame): Promise<void> {
     const detectionVersion = ++this.detectionVersion;
     this.detectionBusy = true;
     const startedAt = performance.now();
 
-    void this.options.detector
-      .detect(detectionFrame, {threshold: this.threshold})
-      .then((results) => {
-        if (detectionVersion !== this.detectionVersion) {
-          return;
-        }
-
-        this.detections = toGpuDetections(results);
-        this.options.onDetectionsUpdated?.();
-
-        if (this.options.onFpsUpdate && this.lastDetectionAt > 0) {
-          const elapsed = startedAt - this.lastDetectionAt;
-          if (elapsed > 0) {
-            this.options.onFpsUpdate(1000 / elapsed);
-          }
-        }
-        this.lastDetectionAt = startedAt;
-      })
-      .catch((error) => {
-        console.warn('Object detection failed', error);
-      })
-      .finally(() => {
-        this.detectionBusy = false;
-
-        if (this.pendingDetectionFrame) {
-          const nextFrame = this.pendingDetectionFrame;
-          this.pendingDetectionFrame = null;
-          this.runDetection(nextFrame);
-        }
+    try {
+      const results = await this.options.detector.detect(detectionFrame, {
+        threshold: this.threshold,
       });
+
+      if (detectionVersion !== this.detectionVersion) {
+        return;
+      }
+
+      this.detections = toGpuDetections(results);
+      this.onDetectionsUpdated?.();
+
+      if (this.options.onFpsUpdate && this.lastDetectionAt > 0) {
+        const elapsed = startedAt - this.lastDetectionAt;
+        if (elapsed > 0) {
+          this.options.onFpsUpdate(1000 / elapsed);
+        }
+      }
+      this.lastDetectionAt = startedAt;
+    } catch (error) {
+      console.warn('Object detection failed', error);
+    } finally {
+      this.detectionBusy = false;
+
+      if (this.pendingDetectionFrame) {
+        const nextFrame = this.pendingDetectionFrame;
+        this.pendingDetectionFrame = null;
+        void this.runDetection(nextFrame);
+      }
+    }
   }
 }

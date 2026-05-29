@@ -1,16 +1,13 @@
 import type {Composition} from '../composition';
-import type {VideoPlayerDetectionOptions} from './VideoPlayer';
 import {AudioPlayer} from './AudioPlayer';
 import {VideoPlayer} from './VideoPlayer';
-
-export interface CompositionPlayerOptions {
-  detection?: VideoPlayerDetectionOptions;
-}
+import type {VideoObjectDetection} from './VideoObjectDetection';
 
 export class CompositionPlayer {
   private readonly root: HTMLElement;
   private readonly videoPlayer: VideoPlayer;
   private readonly audioPlayer: AudioPlayer;
+  private readonly detection: VideoObjectDetection;
   private playButton!: HTMLButtonElement;
   private scrubber!: HTMLInputElement;
   private timeLabel!: HTMLSpanElement;
@@ -23,26 +20,13 @@ export class CompositionPlayer {
   static async create(
     composition: Composition,
     container: HTMLElement,
-    options: CompositionPlayerOptions = {},
+    detection: VideoObjectDetection,
   ): Promise<CompositionPlayer> {
-    let player!: CompositionPlayer;
-
-    const videoPlayer = await VideoPlayer.create(composition, {
-      detection: options.detection
-        ? {
-            ...options.detection,
-            onDetectionsUpdated: () => {
-              void player.refreshFrame({skipDetection: true});
-              options.detection?.onDetectionsUpdated?.();
-            },
-          }
-        : undefined,
-    });
+    const videoPlayer = await VideoPlayer.create(composition, detection);
 
     try {
       const audioPlayer = await AudioPlayer.create(composition.audioLayers);
-      player = new CompositionPlayer(composition, container, videoPlayer, audioPlayer);
-      return player;
+      return new CompositionPlayer(composition, container, videoPlayer, audioPlayer, detection);
     } catch (error) {
       videoPlayer.destroy();
       throw error;
@@ -54,10 +38,11 @@ export class CompositionPlayer {
     container: HTMLElement,
     videoPlayer: VideoPlayer,
     audioPlayer: AudioPlayer,
+    detection: VideoObjectDetection,
   ) {
     this.videoPlayer = videoPlayer;
     this.audioPlayer = audioPlayer;
-
+    this.detection = detection;
     this.root = document.createElement('div');
     this.root.className = 'composition-player';
 
@@ -73,6 +58,10 @@ export class CompositionPlayer {
 
   getVideoPlayer(): VideoPlayer {
     return this.videoPlayer;
+  }
+
+  getDetection(): VideoObjectDetection  {
+    return this.detection;
   }
 
   getVideoCanvas(): HTMLCanvasElement {
@@ -92,6 +81,7 @@ export class CompositionPlayer {
     this.pausePlayback();
     this.audioPlayer.destroy();
     this.videoPlayer.destroy();
+    this.detection?.destroy();
   }
 
   private createControls(): HTMLElement {

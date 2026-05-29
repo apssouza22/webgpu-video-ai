@@ -2,25 +2,18 @@ import type {Composition} from '../composition';
 import {GpuCompositor} from '../gpu/GpuCompositor';
 import {PlayerCanvas} from '../gpu/PlayerCanvas';
 import type {ImageClip} from '../types';
-import type {VideoPlayerDetectionOptions} from './VideoPlayerDetection';
-import {VideoPlayerDetection} from './VideoPlayerDetection';
-
-export type {VideoPlayerDetectionOptions} from './VideoPlayerDetection';
-
-export interface VideoPlayerOptions {
-  detection?: VideoPlayerDetectionOptions;
-}
+import type {VideoObjectDetection} from './VideoObjectDetection';
 
 export class VideoPlayer {
   private readonly playerCanvas: PlayerCanvas;
   private readonly gpuCompositor: GpuCompositor;
   private readonly imageLayers: readonly ImageClip[];
-  private readonly detection?: VideoPlayerDetection;
+  private readonly detection: VideoObjectDetection;
   private renderVersion = 0;
 
   static async create(
     composition: Composition,
-    options: VideoPlayerOptions = {},
+    detection: VideoObjectDetection,
   ): Promise<VideoPlayer> {
     if (!navigator.gpu) {
       throw new Error('WebGPU is not available');
@@ -36,41 +29,23 @@ export class VideoPlayer {
     playerCanvas.init(device, composition.width, composition.height);
     const compositor = await GpuCompositor.create(device, playerCanvas.getFormat());
 
-    return new VideoPlayer(composition, playerCanvas, compositor, options);
+    return new VideoPlayer(composition, playerCanvas, compositor, detection);
   }
 
   private constructor(
     private readonly composition: Composition,
     playerCanvas: PlayerCanvas,
     compositor: GpuCompositor,
-    options: VideoPlayerOptions,
+    detection: VideoObjectDetection,
   ) {
     this.playerCanvas = playerCanvas;
     this.gpuCompositor = compositor;
     this.imageLayers = composition.imageLayers;
-    if (options.detection) {
-      this.detection = new VideoPlayerDetection(options.detection);
-    }
+    this.detection = detection;
   }
 
   getCanvas(): HTMLCanvasElement {
     return this.playerCanvas.getCanvas();
-  }
-
-  setDetectionEnabled(enabled: boolean): void {
-    this.detection?.setEnabled(enabled);
-  }
-
-  isDetectionEnabled(): boolean {
-    return this.detection?.isEnabled() ?? false;
-  }
-
-  setDetectionThreshold(threshold: number): void {
-    this.detection?.setThreshold(threshold);
-  }
-
-  getDetectionThreshold(): number {
-    return this.detection?.getThreshold() ?? 0.5;
   }
 
   async warmupDetection(time = 0, duration?: number): Promise<void> {
@@ -146,7 +121,6 @@ export class VideoPlayer {
   }
 
   destroy(): void {
-    this.detection?.destroy();
     this.gpuCompositor.destroy();
     this.playerCanvas.destroy();
   }
