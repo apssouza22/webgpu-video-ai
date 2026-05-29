@@ -5,6 +5,9 @@ export default defineConfig(({ command }) => ({
   optimizeDeps: {
     exclude: ['@huggingface/transformers'],
   },
+  worker: {
+    format: 'es',
+  },
   build: {
     outDir: 'docs',
   },

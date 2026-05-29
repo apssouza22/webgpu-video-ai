@@ -1,5 +1,5 @@
-import type { ObjectDetector } from './ObjectDetector';
-import { DetectionOverlay } from './DetectionOverlay';
+import type {ObjectDetector} from './ObjectDetector';
+import {DetectionOverlay} from './DetectionOverlay';
 
 export interface DetectionControllerOptions {
   detector: ObjectDetector;
@@ -10,8 +10,6 @@ export interface DetectionControllerOptions {
 export class DetectionController {
   private readonly detector: ObjectDetector;
   private readonly overlay = new DetectionOverlay();
-  private readonly inputCanvas = document.createElement('canvas');
-  private readonly inputCtx: CanvasRenderingContext2D;
   private enabled = true;
   private threshold: number;
   private allowedLabels: Set<string> | null = null;
@@ -24,12 +22,6 @@ export class DetectionController {
     this.detector = options.detector;
     this.threshold = options.threshold ?? 0.5;
     this.onFpsUpdate = options.onFpsUpdate;
-
-    const ctx = this.inputCanvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) {
-      throw new Error('Failed to create detection input canvas');
-    }
-    this.inputCtx = ctx;
   }
 
   get overlayCanvas(): HTMLCanvasElement {
@@ -76,10 +68,9 @@ export class DetectionController {
 
     try {
       this.resize(sourceCanvas);
-      this.copyFrame(sourceCanvas);
 
       const startedAt = performance.now();
-      let results = await this.detector.detect(this.inputCanvas, { threshold: this.threshold });
+      let results = await this.detector.detect(sourceCanvas, {threshold: this.threshold});
 
       if (this.allowedLabels) {
         results = results.filter((result) =>
@@ -105,11 +96,5 @@ export class DetectionController {
     } finally {
       this.busy = false;
     }
-  }
-
-  private copyFrame(sourceCanvas: HTMLCanvasElement): void {
-    this.inputCanvas.width = sourceCanvas.width;
-    this.inputCanvas.height = sourceCanvas.height;
-    this.inputCtx.drawImage(sourceCanvas, 0, 0);
   }
 }
