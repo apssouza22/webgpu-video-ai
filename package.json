@@ -1,0 +1,20 @@
+{
+  "name": "gpu-video-ai",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "WebGPU video composition preview with MediaBunny decode",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "mediabunny": "^1.45.4"
+  },
+  "devDependencies": {
+    "@webgpu/types": "^0.1.66",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.2"
+  }
+}

@@ -1,0 +1,199 @@
+import type {Composition} from '../composition';
+import {AudioPlayer} from './AudioPlayer';
+import {VideoPlayer} from './VideoPlayer';
+
+export class CompositionPlayer {
+  private readonly root: HTMLElement;
+  private readonly videoPlayer: VideoPlayer;
+  private readonly audioPlayer: AudioPlayer;
+  private readonly playButton: HTMLButtonElement;
+  private readonly scrubber: HTMLInputElement;
+  private readonly timeLabel: HTMLSpanElement;
+  private animationFrame: number | null = null;
+  private currentTime = 0;
+  private isPlaying = false;
+  private playStartedAt = 0;
+  private playStartedTime = 0;
+
+  static async create(
+    composition: Composition,
+    container: HTMLElement,
+  ): Promise<CompositionPlayer> {
+    const videoPlayer = await VideoPlayer.create(composition);
+
+    try {
+      const audioPlayer = await AudioPlayer.create(composition.audioLayers);
+      return new CompositionPlayer(composition, container, videoPlayer, audioPlayer);
+    } catch (error) {
+      videoPlayer.destroy();
+      throw error;
+    }
+  }
+
+  private constructor(
+    private readonly composition: Composition,
+    container: HTMLElement,
+    videoPlayer: VideoPlayer,
+    audioPlayer: AudioPlayer,
+  ) {
+    this.videoPlayer = videoPlayer;
+    this.audioPlayer = audioPlayer;
+    this.root = document.createElement('div');
+    this.root.className = 'composition-player';
+    const canvas = this.videoPlayer.getCanvas();
+    canvas.className = 'composition-player__canvas';
+
+    this.playButton = document.createElement('button');
+    this.playButton.type = 'button';
+    this.playButton.textContent = 'Play';
+
+    this.scrubber = document.createElement('input');
+    this.scrubber.type = 'range';
+    this.scrubber.min = '0';
+    this.scrubber.max = `${Math.max(composition.duration, 0)}`;
+    this.scrubber.step = '0.001';
+    this.scrubber.value = '0';
+
+    this.timeLabel = document.createElement('span');
+    this.timeLabel.className = 'composition-player__time';
+
+    this.root.appendChild(canvas);
+    this.root.appendChild(this.createControls());
+
+    container.replaceChildren(this.root);
+    this.updateControls();
+    void this.renderCurrentFrame();
+  }
+
+  pause(): void {
+    this.pausePlayback();
+  }
+
+  destroy(): void {
+    this.pausePlayback();
+    this.audioPlayer.destroy();
+    this.videoPlayer.destroy();
+  }
+
+  private createControls(): HTMLElement {
+    const controls = document.createElement('div');
+    controls.className = 'composition-player__controls';
+
+    this.playButton.addEventListener('click', () => {
+      if (this.isPlaying) {
+        this.pausePlayback();
+      } else {
+        void this.startPlayback();
+      }
+    });
+
+    this.scrubber.addEventListener('input', () => {
+      this.currentTime = Number(this.scrubber.value);
+      if (this.isPlaying) {
+        this.playStartedAt = performance.now();
+        this.playStartedTime = this.currentTime;
+        this.audioPlayer.seek(this.currentTime);
+      }
+      this.updateControls();
+      void this.renderCurrentFrame();
+    });
+
+    controls.append(this.playButton, this.scrubber, this.timeLabel);
+    return controls;
+  }
+
+  private async startPlayback(): Promise<void> {
+    if (this.currentTime >= this.duration) {
+      this.currentTime = 0;
+    }
+
+    this.isPlaying = true;
+    this.playStartedAt = performance.now();
+    this.playStartedTime = this.currentTime;
+    this.playButton.textContent = 'Pause';
+
+    try {
+      await this.audioPlayer.play(this.currentTime);
+    } catch (error) {
+      console.warn('Audio preview playback failed', error);
+      this.pausePlayback();
+      return;
+    }
+
+    this.schedulePlaybackFrame();
+  }
+
+  private pausePlayback(): void {
+    if (this.isPlaying) {
+      this.currentTime = this.playbackTime();
+    }
+
+    this.isPlaying = false;
+    this.cancelPlaybackFrame();
+    this.audioPlayer.pause();
+    this.playButton.textContent = 'Play';
+    this.updateControls();
+  }
+
+  private updateControls(): void {
+    this.scrubber.max = `${this.duration}`;
+    this.scrubber.value = `${this.currentTime}`;
+    this.timeLabel.textContent = `${this.formatTime(this.currentTime)} / ${this.formatTime(this.duration)}`;
+  }
+
+  private schedulePlaybackFrame(): void {
+    if (!this.isPlaying || this.animationFrame !== null) {
+      return;
+    }
+
+    this.animationFrame = requestAnimationFrame(async () => {
+      this.animationFrame = null;
+      if (!this.isPlaying) {
+        return;
+      }
+
+      this.currentTime = this.playbackTime();
+      if (this.currentTime >= this.duration) {
+        this.currentTime = this.duration;
+        this.pausePlayback();
+        return;
+      }
+
+      await this.renderCurrentFrame();
+      this.schedulePlaybackFrame();
+    });
+  }
+
+  private cancelPlaybackFrame(): void {
+    if (this.animationFrame !== null) {
+      cancelAnimationFrame(this.animationFrame);
+      this.animationFrame = null;
+    }
+  }
+
+  private playbackTime(): number {
+    return Math.min(
+      this.duration,
+      this.playStartedTime + (performance.now() - this.playStartedAt) / 1000,
+    );
+  }
+
+  private async renderCurrentFrame(): Promise<void> {
+    this.updateControls();
+    await this.videoPlayer.render(this.currentTime, this.duration);
+  }
+
+  private get duration(): number {
+    return Math.max(this.composition.duration, 0);
+  }
+
+  private formatTime(time: number): string {
+    if (!Number.isFinite(time)) {
+      return '0:00';
+    }
+
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60).toString().padStart(2, '0');
+    return `${minutes}:${seconds}`;
+  }
+}
