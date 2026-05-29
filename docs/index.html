@@ -67,25 +67,6 @@
         font-size: 0.92rem;
         line-height: 1.4;
       }
-      .actions {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin: 16px 0;
-      }
-      button {
-        border: 0;
-        border-radius: 8px;
-        padding: 10px 16px;
-        background: #7eb8ff;
-        color: #07121f;
-        cursor: pointer;
-        font-weight: 700;
-      }
-      button:disabled {
-        cursor: not-allowed;
-        opacity: 0.55;
-      }
       .composition-player {
         position: relative;
         width: min(100%, 960px);
@@ -94,9 +75,67 @@
         border-radius: 12px;
         background: #000;
       }
+      .composition-player__viewport {
+        position: relative;
+        line-height: 0;
+      }
       .composition-player__canvas {
         display: block;
         width: 100%;
+      }
+      .composition-player__detection-overlay {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+      .detection-panel {
+        margin: 16px 0 0;
+        padding: 16px;
+        border: 1px solid #2b2b2b;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .detection-panel h2 {
+        margin: 0 0 12px;
+        font-size: 1rem;
+        font-weight: 700;
+      }
+      .detection-panel__row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px 20px;
+        margin-bottom: 12px;
+      }
+      .detection-panel__row:last-child {
+        margin-bottom: 0;
+      }
+      .detection-panel label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #d7d7d7;
+        font-size: 0.95rem;
+      }
+      .detection-panel input[type='range'] {
+        width: 160px;
+      }
+      .detection-panel input[type='text'] {
+        flex: 1;
+        min-width: 200px;
+        padding: 8px 10px;
+        border: 1px solid #2b2b2b;
+        border-radius: 8px;
+        background: #0d1117;
+        color: #eee;
+        font: 13px/1.4 ui-monospace, monospace;
+      }
+      #detection-fps {
+        margin: 0;
+        font: 13px/1.5 ui-monospace, monospace;
+        color: #7eb8ff;
       }
       .composition-player__controls {
         display: grid;
@@ -120,11 +159,38 @@
         font: 13px/1.5 ui-monospace, monospace;
         max-width: 720px;
       }
+      .composition-code {
+        margin: 0 0 24px;
+      }
+      .composition-code h2 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #fff;
+      }
+      .composition-code p {
+        margin: 0 0 12px;
+        color: #bdbdbd;
+        font-size: 0.95rem;
+        line-height: 1.5;
+      }
+      .composition-code pre {
+        margin: 0;
+        padding: 16px;
+        overflow-x: auto;
+        border: 1px solid #2b2b2b;
+        border-radius: 12px;
+        background: #0d1117;
+      }
+      .composition-code code {
+        font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: #c9d1d9;
+      }
       a {
         color: #7eb8ff;
       }
     </style>
-    <script type="module" crossorigin src="/webgpu-video-encoding/assets/index-B8Jos5aO.js"></script>
+    <script type="module" crossorigin src="/webgpu-video-encoding/assets/index-Bw6toWB7.js"></script>
   </head>
   <body>
     <main>
@@ -134,29 +200,65 @@
         <p class="intro">
           This project explores browser-native video composition using WebGPU for
           high-performance layer rendering. It previews a timeline with multiple
-          video, image, and audio layers, then exports the composed frames through
-          WebCodecs and MediaBunny as an MP4.
+          video, image, and audio layers decoded with MediaBunny.
         </p>
         <ul class="pipeline" aria-label="Video processing pipeline">
+          <li>
+            <strong>Decode media</strong>
+            <span>Video and audio tracks are decoded in the browser with MediaBunny.</span>
+          </li>
           <li>
             <strong>Compose on GPU</strong>
             <span>Video frames and image overlays are rendered with WebGPU.</span>
           </li>
           <li>
-            <strong>Preview timeline</strong>
-            <span>Use play, pause, and scrub controls before exporting.</span>
+            <strong>Detect objects</strong>
+            <span>RF-DETR runs on each composed frame via Transformers.js and WebGPU.</span>
           </li>
           <li>
-            <strong>Export MP4</strong>
-            <span>Frames are captured from OffscreenCanvas and encoded with WebCodecs.</span>
+            <strong>Preview timeline</strong>
+            <span>Use play, pause, and the scrubber to explore the composition.</span>
           </li>
         </ul>
       </section>
+      <section class="composition-code" aria-labelledby="composition-code-title">
+        <h2 id="composition-code-title">Demo composition</h2>
+        <p>The preview below uses this timeline (1280×720, 30 fps):</p>
+        <pre><code>export const DEMO_COMPOSITION = new Composition(30, 1280, 720)
+  .addLayer(new VideoClip(demoAssetUrl('samples/video.mp4'), 0, 5))
+  .addLayer(new VideoClip(demoAssetUrl('samples/video-2.mp4'), 5))
+  .addLayer(new AudioClip(demoAssetUrl('samples/video-2.mp4'), 5))
+  .addLayer(new AudioClip(demoAssetUrl('samples/video.mp4'), 0, 5))
+  .addLayer(new ImageClip(demoAssetUrl('samples/overlay.png'), 1, 3, 0.62, 0.08, 0.32, 0.32, 0.92))
+  .addLayer(new ImageClip(demoAssetUrl('samples/overlay-2.png'), 1, 3, 0, 0.08, 0.32, 0.32, 0.92));</code></pre>
+      </section>
       <div id="player"></div>
-      <div class="actions">
-        <button id="export-button" type="button" disabled>Export composition</button>
-        <p id="status">Initializing…</p>
-      </div>
+      <section class="detection-panel" aria-labelledby="detection-panel-title">
+        <h2 id="detection-panel-title">Object detection (RF-DETR)</h2>
+        <div class="detection-panel__row">
+          <label>
+            <input id="detection-enabled" type="checkbox" checked />
+            Enable detection
+          </label>
+          <label>
+            Threshold
+            <input id="detection-threshold" type="range" min="0.1" max="0.9" step="0.05" value="0.5" />
+            <span id="detection-threshold-value">0.50</span>
+          </label>
+          <p id="detection-fps">Detection FPS: —</p>
+        </div>
+        <div class="detection-panel__row">
+          <label style="flex: 1">
+            Labels filter (optional, comma-separated COCO subset)
+            <input
+              id="detection-labels"
+              type="text"
+              placeholder="person, car, dog"
+            />
+          </label>
+        </div>
+      </section>
+      <p id="status">Initializing…</p>
     </main>
   </body>
 </html>

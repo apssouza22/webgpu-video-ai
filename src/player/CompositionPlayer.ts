@@ -1,11 +1,18 @@
 import type {Composition} from '../composition';
+import type {DetectionController} from '../detection/DetectionController';
 import {AudioPlayer} from './AudioPlayer';
 import {VideoPlayer} from './VideoPlayer';
 
+export interface CompositionPlayerOptions {
+  detection?: DetectionController;
+}
+
 export class CompositionPlayer {
   private readonly root: HTMLElement;
+  private readonly viewport: HTMLElement;
   private readonly videoPlayer: VideoPlayer;
   private readonly audioPlayer: AudioPlayer;
+  private readonly detection?: DetectionController;
   private readonly playButton: HTMLButtonElement;
   private readonly scrubber: HTMLInputElement;
   private readonly timeLabel: HTMLSpanElement;
@@ -14,16 +21,18 @@ export class CompositionPlayer {
   private isPlaying = false;
   private playStartedAt = 0;
   private playStartedTime = 0;
+  private resizeObserver: ResizeObserver | null = null;
 
   static async create(
     composition: Composition,
     container: HTMLElement,
+    options: CompositionPlayerOptions = {},
   ): Promise<CompositionPlayer> {
     const videoPlayer = await VideoPlayer.create(composition);
 
     try {
       const audioPlayer = await AudioPlayer.create(composition.audioLayers);
-      return new CompositionPlayer(composition, container, videoPlayer, audioPlayer);
+      return new CompositionPlayer(composition, container, videoPlayer, audioPlayer, options);
     } catch (error) {
       videoPlayer.destroy();
       throw error;
@@ -35,13 +44,29 @@ export class CompositionPlayer {
     container: HTMLElement,
     videoPlayer: VideoPlayer,
     audioPlayer: AudioPlayer,
+    options: CompositionPlayerOptions,
   ) {
     this.videoPlayer = videoPlayer;
     this.audioPlayer = audioPlayer;
+    this.detection = options.detection;
+
     this.root = document.createElement('div');
     this.root.className = 'composition-player';
+
+    this.viewport = document.createElement('div');
+    this.viewport.className = 'composition-player__viewport';
+
     const canvas = this.videoPlayer.getCanvas();
     canvas.className = 'composition-player__canvas';
+    this.viewport.appendChild(canvas);
+
+    if (this.detection) {
+      this.viewport.appendChild(this.detection.overlayCanvas);
+      this.resizeObserver = new ResizeObserver(() => {
+        this.detection?.resize(canvas);
+      });
+      this.resizeObserver.observe(canvas);
+    }
 
     this.playButton = document.createElement('button');
     this.playButton.type = 'button';
@@ -57,12 +82,20 @@ export class CompositionPlayer {
     this.timeLabel = document.createElement('span');
     this.timeLabel.className = 'composition-player__time';
 
-    this.root.appendChild(canvas);
+    this.root.appendChild(this.viewport);
     this.root.appendChild(this.createControls());
 
     container.replaceChildren(this.root);
     this.updateControls();
     void this.renderCurrentFrame();
+  }
+
+  getDetection(): DetectionController | undefined {
+    return this.detection;
+  }
+
+  getVideoCanvas(): HTMLCanvasElement {
+    return this.videoPlayer.getCanvas();
   }
 
   pause(): void {
@@ -71,6 +104,7 @@ export class CompositionPlayer {
 
   destroy(): void {
     this.pausePlayback();
+    this.resizeObserver?.disconnect();
     this.audioPlayer.destroy();
     this.videoPlayer.destroy();
   }
@@ -181,6 +215,16 @@ export class CompositionPlayer {
   private async renderCurrentFrame(): Promise<void> {
     this.updateControls();
     await this.videoPlayer.render(this.currentTime, this.duration);
+    await this.runDetection();
+  }
+
+  private async runDetection(): Promise<void> {
+    if (!this.detection?.isEnabled()) {
+      return;
+    }
+
+    const canvas = this.videoPlayer.getCanvas();
+    await this.detection.processFrame(canvas);
   }
 
   private get duration(): number {

@@ -24,6 +24,7 @@ In a supported desktop browser (Chrome/Edge recommended), the app:
 2. Decodes video and audio with **MediaBunny**
 3. Composes video and image layers with a **WebGPU shader**
 4. Shows an interactive WebGPU preview player with play/pause controls, audio playback, and a scrubber
+5. Runs **RF-DETR** object detection on each composed frame via **Transformers.js** (WebGPU), drawing bounding boxes on an overlay
 
 The demo composition is 1280x720 at 30 fps. It plays `video.mp4` for the first 5 seconds, switches to `video-2.mp4`,
 schedules explicit audio layers from the same files for preview playback, and displays two transparent image overlays
@@ -62,10 +63,17 @@ const frame = composition.getFrameContextAtTime(2.5);
 const sourceFrame = await frame.videos[0]?.nextSourceFrame();
 ```
 
+## Object detection
+
+Detection uses the same setup as the [RF-DETR WebGPU demo](https://huggingface.co/spaces/webml-community/RF-DETR-Medium-WebGPU): `onnx-community/rfdetr_medium-ONNX` via `@huggingface/transformers` with `device: 'webgpu'`. The model downloads from Hugging Face on first load (~tens of MB).
+
+Use the detection panel to toggle inference, adjust the score threshold, filter COCO labels, and view detection FPS. Inference runs on the **composed** WebGPU canvas (video + image overlays), not raw source files alone.
+
 ## Requirements
 
-- Browser with **WebGPU**
+- Browser with **WebGPU** (used for both composition and RF-DETR inference)
 - **Chrome or Edge (desktop)** recommended
+- Dev server serves `Cross-Origin-Opener-Policy` / `Cross-Origin-Embedder-Policy` headers (configured in `vite.config.ts`) for Transformers.js
 - Sample media in `public/samples/`:
   - `video.mp4` — first video clip, ideally with an audio track
   - `video-2.mp4` — second video clip, ideally with an audio track

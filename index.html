@@ -75,9 +75,67 @@
         border-radius: 12px;
         background: #000;
       }
+      .composition-player__viewport {
+        position: relative;
+        line-height: 0;
+      }
       .composition-player__canvas {
         display: block;
         width: 100%;
+      }
+      .composition-player__detection-overlay {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+      .detection-panel {
+        margin: 16px 0 0;
+        padding: 16px;
+        border: 1px solid #2b2b2b;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .detection-panel h2 {
+        margin: 0 0 12px;
+        font-size: 1rem;
+        font-weight: 700;
+      }
+      .detection-panel__row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px 20px;
+        margin-bottom: 12px;
+      }
+      .detection-panel__row:last-child {
+        margin-bottom: 0;
+      }
+      .detection-panel label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #d7d7d7;
+        font-size: 0.95rem;
+      }
+      .detection-panel input[type='range'] {
+        width: 160px;
+      }
+      .detection-panel input[type='text'] {
+        flex: 1;
+        min-width: 200px;
+        padding: 8px 10px;
+        border: 1px solid #2b2b2b;
+        border-radius: 8px;
+        background: #0d1117;
+        color: #eee;
+        font: 13px/1.4 ui-monospace, monospace;
+      }
+      #detection-fps {
+        margin: 0;
+        font: 13px/1.5 ui-monospace, monospace;
+        color: #7eb8ff;
       }
       .composition-player__controls {
         display: grid;
@@ -153,6 +211,10 @@
             <span>Video frames and image overlays are rendered with WebGPU.</span>
           </li>
           <li>
+            <strong>Detect objects</strong>
+            <span>RF-DETR runs on each composed frame via Transformers.js and WebGPU.</span>
+          </li>
+          <li>
             <strong>Preview timeline</strong>
             <span>Use play, pause, and the scrubber to explore the composition.</span>
           </li>
@@ -170,6 +232,31 @@
   .addLayer(new ImageClip(demoAssetUrl('samples/overlay-2.png'), 1, 3, 0, 0.08, 0.32, 0.32, 0.92));</code></pre>
       </section>
       <div id="player"></div>
+      <section class="detection-panel" aria-labelledby="detection-panel-title">
+        <h2 id="detection-panel-title">Object detection (RF-DETR)</h2>
+        <div class="detection-panel__row">
+          <label>
+            <input id="detection-enabled" type="checkbox" checked />
+            Enable detection
+          </label>
+          <label>
+            Threshold
+            <input id="detection-threshold" type="range" min="0.1" max="0.9" step="0.05" value="0.5" />
+            <span id="detection-threshold-value">0.50</span>
+          </label>
+          <p id="detection-fps">Detection FPS: —</p>
+        </div>
+        <div class="detection-panel__row">
+          <label style="flex: 1">
+            Labels filter (optional, comma-separated COCO subset)
+            <input
+              id="detection-labels"
+              type="text"
+              placeholder="person, car, dog"
+            />
+          </label>
+        </div>
+      </section>
       <p id="status">Initializing…</p>
     </main>
     <script type="module" src="/src/main.ts"></script>
