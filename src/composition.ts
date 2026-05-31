@@ -164,5 +164,7 @@ export class Composition {
 const demoAssetUrl = (path: string): string => `${import.meta.env.BASE_URL}${path}`;
 
 export const DEMO_COMPOSITION = new Composition(30, 1280, 720)
-  .addLayer(new VideoClip(demoAssetUrl('samples/video.mp4'), 0))
-  .addLayer(new AudioClip(demoAssetUrl('samples/video.mp4'), 0));
+.addLayer(new VideoClip(demoAssetUrl('samples/video.mp4'), 0))
+.addLayer(new AudioClip(demoAssetUrl('samples/video.mp4'), 0))
+.addLayer(new ImageClip(demoAssetUrl('samples/overlay.png'), 1, 3, 0.62, 0.08, 0.32, 0.32, 0.92))
+.addLayer(new ImageClip(demoAssetUrl('samples/overlay-2.png'), 1, 3, 0, 0.08, 0.32, 0.32, 0.92));

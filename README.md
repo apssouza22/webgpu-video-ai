@@ -37,9 +37,9 @@ set of textures: a base video frame plus overlays, transforms, opacity, and late
 effects. WebGPU gives the browser direct access to a modern graphics pipeline, so
 this project keeps rendering on the GPU instead of copying pixels back through the CPU.
 
-The current compositor is intentionally small: it composites one active video
-layer with any active image overlays. The structure is meant to grow toward more
-video layers, transitions, effects, and timeline behavior.
+The current compositor composites every active video layer (in layer order) with
+any active image overlays. The structure is meant to grow toward transitions,
+effects, and richer timeline behavior.
 
 ## Composition API
 

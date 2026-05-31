@@ -26,8 +26,8 @@ async function verifySamples(): Promise<void> {
       throw new Error(
         `Missing sample media: ${url}\n\n` +
           'Add files under public/samples/:\n' +
-          '  - video.mp4 (with audio track)\n' +
-          '  - overlay.png\n\n' +
+          '  - video.mp4, video-2.mp4 (with audio tracks)\n' +
+          '  - overlay.png, overlay-2.png\n\n' +
           'See README.md for details.',
       );
     }
@@ -68,8 +68,7 @@ async function main(): Promise<void> {
   const detector = await ObjectDetector.create(setStatus);
   const threshold = thresholdSlider ? Number(thresholdSlider.value) : 0.5;
 
-  const detection = new VideoObjectDetection({
-    detector,
+  const detection = new VideoObjectDetection(detector, {
     threshold,
     enabled: detectionToggle?.checked ?? true,
     onFpsUpdate: (fps) => {

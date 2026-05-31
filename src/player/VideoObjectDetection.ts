@@ -2,8 +2,7 @@ import type {GpuDetectionBox} from '../detection/gpuDetection';
 import {toGpuDetections} from '../detection/gpuDetection';
 import type {ObjectDetector} from '../detection/ObjectDetector';
 
-export interface VideoPlayerDetectionOptions {
-  detector: ObjectDetector;
+export interface ObjectDetectionOptions {
   threshold?: number;
   enabled?: boolean;
   onFpsUpdate?: (fps: number) => void;
@@ -20,7 +19,10 @@ export class VideoObjectDetection {
   private lastDetectionAt = 0;
   private onDetectionsUpdated?: () => void;
 
-  constructor(private readonly options: VideoPlayerDetectionOptions) {
+  constructor(
+    private readonly detector: ObjectDetector,
+    private readonly options: ObjectDetectionOptions,
+  ) {
     this.enabled = options.enabled ?? true;
     this.threshold = options.threshold ?? 0.5;
     this.onDetectionsUpdated = options.onDetectionsUpdated;
@@ -51,7 +53,7 @@ export class VideoObjectDetection {
   }
 
   async warmup(frame: VideoFrame, threshold = this.threshold): Promise<void> {
-    await this.options.detector.warmup(frame, threshold);
+    await this.detector.warmup(frame, threshold);
   }
 
   schedule(videoFrame: VideoFrame): void {
@@ -79,7 +81,7 @@ export class VideoObjectDetection {
     const startedAt = performance.now();
 
     try {
-      const results = await this.options.detector.detect(detectionFrame, {
+      const results = await this.detector.detect(detectionFrame, {
         threshold: this.threshold,
       });
 

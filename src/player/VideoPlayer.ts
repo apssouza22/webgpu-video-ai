@@ -1,7 +1,8 @@
 import type {Composition} from '../composition';
-import {GpuCompositor} from '../gpu/GpuCompositor';
+import {GpuCompositor, type VideoLayerInput} from '../gpu/GpuCompositor';
 import {PlayerCanvas} from '../gpu/PlayerCanvas';
-import type {ImageClip} from '../types';
+import type {DecodedVideoFrame} from '../media/VideoFrameSource';
+import type {ImageClip, VideoFrameContext, VideoLayerClip} from '../types';
 import type {VideoObjectDetection} from './VideoObjectDetection';
 
 export class VideoPlayer {
@@ -55,21 +56,16 @@ export class VideoPlayer {
 
     const renderDuration = duration ?? this.composition.duration;
     const frameContext = this.composition.getFrameContextAtTime(time);
-    const videoLayer = frameContext.videos[0];
-    if (!videoLayer) {
+    const decodedVideos = await this.decodeVideoLayers(frameContext);
+    if (decodedVideos.length === 0) {
       return;
     }
 
-    const sourceFrame = await videoLayer.clip.nextSourceFrame(
-      videoLayer.sourceTime,
-      frameContext.frame,
-    );
-
     try {
-      const detectionFrame = new VideoFrame(sourceFrame.frame);
+      const detectionFrame = new VideoFrame(decodedVideos[0].sourceFrame.frame);
       await this.detection.warmup(detectionFrame, this.detection.getThreshold());
     } finally {
-      sourceFrame.close();
+      this.closeDecodedVideos(decodedVideos);
     }
 
     await this.render(time, renderDuration);
@@ -83,40 +79,35 @@ export class VideoPlayer {
     const renderVersion = ++this.renderVersion;
     const renderTime = Math.min(time, Math.max(0, duration - 0.001));
     const frameContext = this.composition.getFrameContextAtTime(renderTime);
-    const videoLayer = frameContext.videos[0];
-    if (!videoLayer) {
-      return;
-    }
-
-    const sourceFrame = await videoLayer.clip.nextSourceFrame(
-      videoLayer.sourceTime,
-      frameContext.frame,
-    );
-    const overlays = await Promise.all(
+    const decodedVideos = await this.decodeVideoLayers(frameContext);
+    const imageLayers = await Promise.all(
       this.currentImageLayers(renderTime).map(async (imageClip) => ({
         image: await imageClip.loadImageElement(),
         imageClip,
       })),
     );
 
+    if (decodedVideos.length === 0 && imageLayers.length === 0) {
+      return;
+    }
+
     try {
       if (renderVersion !== this.renderVersion) {
         return;
       }
 
-      const videoFrame = sourceFrame.frame;
-      if (!options.skipDetection) {
-        this.detection?.schedule(videoFrame);
+      if (!options.skipDetection && decodedVideos.length > 0) {
+        this.detection?.schedule(decodedVideos[0].sourceFrame.frame);
       }
 
       await this.gpuCompositor.renderFrame(this.playerCanvas.getContext(), {
         time: renderTime,
-        videoFrame,
-        overlays,
+        videoLayers: this.toVideoLayerInputs(decodedVideos),
+        imageLayers,
         detections: this.detection?.getDetections() ?? [],
       });
     } finally {
-      sourceFrame.close();
+      this.closeDecodedVideos(decodedVideos);
     }
   }
 
@@ -127,5 +118,36 @@ export class VideoPlayer {
 
   private currentImageLayers(time: number): readonly ImageClip[] {
     return this.imageLayers.filter((clip) => clip.containsTime(time));
+  }
+
+  private decodeVideoLayers(
+    frameContext: VideoFrameContext,
+  ): Promise<Array<{videoLayer: VideoLayerClip; sourceFrame: DecodedVideoFrame}>> {
+    return Promise.all(
+      frameContext.videos.map(async (videoLayer) => ({
+        videoLayer,
+        sourceFrame: await videoLayer.clip.nextSourceFrame(
+          videoLayer.sourceTime,
+          frameContext.frame,
+        ),
+      })),
+    );
+  }
+
+  private toVideoLayerInputs(
+    decodedVideos: Array<{videoLayer: VideoLayerClip; sourceFrame: DecodedVideoFrame}>,
+  ): VideoLayerInput[] {
+    return decodedVideos.map(({videoLayer, sourceFrame}) => ({
+      videoFrame: sourceFrame.frame,
+      videoClip: videoLayer.clip,
+    }));
+  }
+
+  private closeDecodedVideos(
+    decodedVideos: Array<{sourceFrame: DecodedVideoFrame}>,
+  ): void {
+    for (const {sourceFrame} of decodedVideos) {
+      sourceFrame.close();
+    }
   }
 }
