@@ -1,6 +1,7 @@
 import {ObjectDetector} from './detection/ObjectDetector';
 import {CompositionPlayer} from './player/CompositionPlayer';
 import {VideoObjectDetection} from './player/VideoObjectDetection';
+import {createFpsDisplay} from './utils/fpsDisplay';
 import {DEMO_COMPOSITION} from './composition';
 
 const statusEl = document.getElementById('status');
@@ -9,6 +10,16 @@ const detectionToggle = document.getElementById('detection-enabled') as HTMLInpu
 const thresholdSlider = document.getElementById('detection-threshold') as HTMLInputElement | null;
 const thresholdValue = document.getElementById('detection-threshold-value');
 const detectionFps = document.getElementById('detection-fps');
+
+const fpsDisplay = createFpsDisplay(({render, detection}) => {
+  if (!detectionFps) {
+    return;
+  }
+
+  const renderText = render !== null ? render.toFixed(1) : '—';
+  const detectionText = detection !== null ? detection.toFixed(1) : '—';
+  detectionFps.textContent = `Render FPS: ${renderText} · Detection FPS: ${detectionText}`;
+});
 
 function setStatus(message: string): void {
   if (statusEl) {
@@ -71,17 +82,15 @@ async function main(): Promise<void> {
   const detection = new VideoObjectDetection(detector, {
     threshold,
     enabled: detectionToggle?.checked ?? true,
-    onFpsUpdate: (fps) => {
-      if (detectionFps) {
-        detectionFps.textContent = `Detection FPS: ${fps.toFixed(1)}`;
-      }
-    },
+    onFpsUpdate: (fps) => fpsDisplay.addDetectionSample(fps),
   });
 
   setStatus('Loading preview…');
   await DEMO_COMPOSITION.loadLayerSources();
 
-  const player = await CompositionPlayer.create(DEMO_COMPOSITION, playerEl, detection);
+  const player = await CompositionPlayer.create(DEMO_COMPOSITION, playerEl, detection, {
+    onRenderFpsUpdate: (fps) => fpsDisplay.addRenderSample(fps),
+  });
 
   wireDetectionControls(player);
 

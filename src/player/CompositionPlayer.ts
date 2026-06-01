@@ -3,11 +3,16 @@ import {AudioPlayer} from './AudioPlayer';
 import {VideoPlayer} from './VideoPlayer';
 import type {VideoObjectDetection} from './VideoObjectDetection';
 
+export interface CompositionPlayerOptions {
+  onRenderFpsUpdate?: (fps: number) => void;
+}
+
 export class CompositionPlayer {
   private readonly root: HTMLElement;
   private readonly videoPlayer: VideoPlayer;
   private readonly audioPlayer: AudioPlayer;
   private readonly detection: VideoObjectDetection;
+  private readonly onRenderFpsUpdate?: (fps: number) => void;
   private playButton!: HTMLButtonElement;
   private scrubber!: HTMLInputElement;
   private timeLabel!: HTMLSpanElement;
@@ -16,17 +21,26 @@ export class CompositionPlayer {
   private isPlaying = false;
   private playStartedAt = 0;
   private playStartedTime = 0;
+  private lastRenderAt = 0;
 
   static async create(
     composition: Composition,
     container: HTMLElement,
     detection: VideoObjectDetection,
+    options: CompositionPlayerOptions = {},
   ): Promise<CompositionPlayer> {
     const videoPlayer = await VideoPlayer.create(composition, detection);
 
     try {
       const audioPlayer = await AudioPlayer.create(composition.audioLayers);
-      return new CompositionPlayer(composition, container, videoPlayer, audioPlayer, detection);
+      return new CompositionPlayer(
+        composition,
+        container,
+        videoPlayer,
+        audioPlayer,
+        detection,
+        options,
+      );
     } catch (error) {
       videoPlayer.destroy();
       throw error;
@@ -39,10 +53,12 @@ export class CompositionPlayer {
     videoPlayer: VideoPlayer,
     audioPlayer: AudioPlayer,
     detection: VideoObjectDetection,
+    options: CompositionPlayerOptions,
   ) {
     this.videoPlayer = videoPlayer;
     this.audioPlayer = audioPlayer;
     this.detection = detection;
+    this.onRenderFpsUpdate = options.onRenderFpsUpdate;
     this.root = document.createElement('div');
     this.root.className = 'composition-player';
 
@@ -69,8 +85,17 @@ export class CompositionPlayer {
   }
 
   async refreshFrame(options: {skipDetection?: boolean} = {}): Promise<void> {
+    const startedAt = performance.now();
     this.updateControls();
     await this.videoPlayer.render(this.currentTime, this.duration, options);
+
+    if (this.onRenderFpsUpdate && this.lastRenderAt > 0) {
+      const elapsed = startedAt - this.lastRenderAt;
+      if (elapsed > 0) {
+        this.onRenderFpsUpdate(1000 / elapsed);
+      }
+    }
+    this.lastRenderAt = startedAt;
   }
 
   pause(): void {

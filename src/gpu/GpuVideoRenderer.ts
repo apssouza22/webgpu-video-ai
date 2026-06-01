@@ -1,5 +1,4 @@
 import videoShader from '../shaders/video.wgsl?raw';
-import type {VideoClip} from '../types';
 import {AbstractGpuRenderer, type FragmentTargetOptions} from './AbstractGpuRenderer';
 import type {VideoLayerInput} from './GpuCompositor';
 
