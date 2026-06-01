@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig(({ command }) => ({
-  base: command === 'build' ? '/webgpu-video-encoding/' : '/',
+  base: command === 'build' ? '/webgpu-video-ai/' : '/',
   optimizeDeps: {
     exclude: ['@huggingface/transformers'],
   },

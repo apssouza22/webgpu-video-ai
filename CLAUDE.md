@@ -54,7 +54,7 @@ The detection worker (`src/detection/detection.worker.ts`) uses Transformers.js 
 
 ### Build output
 
-Production build targets `docs/` with base path `/webgpu-video-encoding/` for GitHub Pages deployment. Transformers.js is excluded from `optimizeDeps` because it downloads models dynamically at runtime.
+Production build targets `docs/` with base path `/webgpu-video-ai/` for GitHub Pages deployment. Transformers.js is excluded from `optimizeDeps` because it downloads models dynamically at runtime.
 
 ### Clip coordinate system
 

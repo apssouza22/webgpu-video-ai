@@ -1,0 +1,88 @@
+<mxfile>
+  <diagram name="frame-budget">
+    <mxGraphModel defaultFontFamily="Noto Sans JP" page="0" pageWidth="1500" pageHeight="520">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title" value="Per-Frame Time Budget at 30fps" style="text;html=1;fontSize=28;fontStyle=1;fontFamily=Noto Sans JP;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="150" y="15" width="1200" height="45" as="geometry"/>
+        </mxCell>
+        <!-- Meta -->
+        <mxCell id="meta" value="AI inference (30-80ms) far exceeds the 33ms frame window — must run asynchronously on a worker" style="text;html=1;fontSize=14;fontFamily=Noto Sans JP;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="150" y="57" width="1200" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Timeline background (drawn first, at back) -->
+        <mxCell id="timeline_bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;strokeWidth=1;fontFamily=Noto Sans JP;" vertex="1" parent="1">
+          <mxGeometry x="50" y="95" width="1400" height="350" as="geometry"/>
+        </mxCell>
+
+        <!-- Main thread lane background -->
+        <mxCell id="mt_lane" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1;fontFamily=Noto Sans JP;" vertex="1" parent="1">
+          <mxGeometry x="200" y="115" width="1200" height="120" as="geometry"/>
+        </mxCell>
+
+        <!-- Worker thread lane background -->
+        <mxCell id="w_lane" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff8e6;strokeColor=#d6b656;strokeWidth=1;fontFamily=Noto Sans JP;" vertex="1" parent="1">
+          <mxGeometry x="200" y="255" width="1200" height="165" as="geometry"/>
+        </mxCell>
+
+        <!-- Budget line: thin red rectangle acting as a vertical line -->
+        <mxCell id="budget_line_rect" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b85450;strokeColor=#b85450;strokeWidth=0;dashed=0;fontFamily=Noto Sans JP;" vertex="1" parent="1">
+          <mxGeometry x="622" y="108" width="3" height="307" as="geometry"/>
+        </mxCell>
+
+        <!-- Thread labels -->
+        <mxCell id="mt_label" value="MAIN&lt;br&gt;THREAD" style="text;html=1;fontSize=15;fontStyle=1;fontFamily=Noto Sans JP;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="55" y="130" width="130" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="w_label" value="WORKER&lt;br&gt;THREAD" style="text;html=1;fontSize=15;fontStyle=1;fontFamily=Noto Sans JP;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="55" y="270" width="130" height="130" as="geometry"/>
+        </mxCell>
+
+        <!-- Task bars: scaled to 80ms = 1200px, so 1ms = 15px -->
+        <!-- Decode 0–5ms: x=200, w=75 -->
+        <mxCell id="bar_decode" value="Decode&lt;br&gt;~2-5ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=14;fontFamily=Noto Sans JP;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="200" y="135" width="95" height="80" as="geometry"/>
+        </mxCell>
+        <!-- Overlays 5–6ms: x=295, w=60 (widened for readability) -->
+        <mxCell id="bar_overlays" value="Overlays&lt;br&gt;~1ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;fontSize=14;fontFamily=Noto Sans JP;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="295" y="135" width="80" height="80" as="geometry"/>
+        </mxCell>
+        <!-- Render 6–8ms: x=375, w=70 -->
+        <mxCell id="bar_render" value="GPU render&lt;br&gt;~2ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=14;fontFamily=Noto Sans JP;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="375" y="135" width="90" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Inference bar: 0–80ms = full 1200px width -->
+        <mxCell id="bar_inference" value="AI inference RF-DETR — 30-80ms on GPU" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;fontSize=20;fontFamily=Noto Sans JP;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="200" y="270" width="1185" height="120" as="geometry"/>
+        </mxCell>
+
+        <!-- Budget label above line -->
+        <mxCell id="budget_label" value="↓ 33ms budget" style="text;html=1;fontSize=15;fontColor=#b85450;fontStyle=1;fontFamily=Noto Sans JP;strokeColor=none;fillColor=none;align=left;" vertex="1" parent="1">
+          <mxGeometry x="626" y="95" width="180" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- Scale tick marks at y=445 (below worker lane bottom 255+165=420) -->
+        <mxCell id="tick0" value="0ms" style="text;html=1;fontSize=14;fontFamily=Noto Sans JP;strokeColor=none;fillColor=none;align=center;fontColor=#444444;" vertex="1" parent="1">
+          <mxGeometry x="185" y="445" width="50" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="tick20" value="20ms" style="text;html=1;fontSize=14;fontFamily=Noto Sans JP;strokeColor=none;fillColor=none;align=center;fontColor=#444444;" vertex="1" parent="1">
+          <mxGeometry x="475" y="445" width="50" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="tick40" value="40ms" style="text;html=1;fontSize=14;fontFamily=Noto Sans JP;strokeColor=none;fillColor=none;align=center;fontColor=#444444;" vertex="1" parent="1">
+          <mxGeometry x="775" y="445" width="50" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="tick60" value="60ms" style="text;html=1;fontSize=14;fontFamily=Noto Sans JP;strokeColor=none;fillColor=none;align=center;fontColor=#444444;" vertex="1" parent="1">
+          <mxGeometry x="1075" y="445" width="50" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="tick80" value="80ms" style="text;html=1;fontSize=14;fontFamily=Noto Sans JP;strokeColor=none;fillColor=none;align=center;fontColor=#444444;" vertex="1" parent="1">
+          <mxGeometry x="1365" y="445" width="50" height="25" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

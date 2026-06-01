@@ -1,0 +1,66 @@
+<mxfile>
+  <diagram name="onnx-graph">
+    <mxGraphModel defaultFontFamily="Noto Sans JP" page="0" pageWidth="900" pageHeight="660">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title" value="RF-DETR ONNX Computation Graph" style="text;html=1;fontSize=28;fontStyle=1;fontFamily=Noto Sans JP;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="50" y="15" width="800" height="45" as="geometry"/>
+        </mxCell>
+        <!-- Meta -->
+        <mxCell id="meta" value="Model architecture: Input image → Backbone → Encoder → Decoder → Box and Class outputs" style="text;html=1;fontSize=14;fontFamily=Noto Sans JP;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="50" y="55" width="800" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows (back layer) -->
+        <mxCell id="arr1" value="image tensor" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=2;endArrow=block;endFill=1;strokeColor=#666666;fontFamily=Noto Sans JP;fontSize=14;" edge="1" source="input" target="backbone" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arr2" value="feature maps" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=2;endArrow=block;endFill=1;strokeColor=#666666;fontFamily=Noto Sans JP;fontSize=14;" edge="1" source="backbone" target="encoder" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arr3" value="encoded tokens" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=2;endArrow=block;endFill=1;strokeColor=#666666;fontFamily=Noto Sans JP;fontSize=14;" edge="1" source="encoder" target="decoder" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arr4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=2;endArrow=block;endFill=1;strokeColor=#666666;fontFamily=Noto Sans JP;fontSize=14;" edge="1" source="decoder" target="box_head" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="450" y="530"/>
+              <mxPoint x="240" y="530"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arr5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=2;endArrow=block;endFill=1;strokeColor=#666666;fontFamily=Noto Sans JP;fontSize=14;" edge="1" source="decoder" target="class_head" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="450" y="530"/>
+              <mxPoint x="660" y="530"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Nodes -->
+        <mxCell id="input" value="Input image 576×576×3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=17;fontFamily=Noto Sans JP;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="250" y="90" width="400" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="backbone" value="Backbone ResNet-D&lt;br&gt;Conv2D + BatchNorm&lt;br&gt;convolutional feature extraction" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;fontSize=17;fontFamily=Noto Sans JP;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="250" y="185" width="400" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="encoder" value="Encoder DETR head&lt;br&gt;Multi-head self-attention&lt;br&gt;MatMul + Softmax + Add" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;fontSize=17;fontFamily=Noto Sans JP;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="250" y="305" width="400" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="decoder" value="Decoder&lt;br&gt;Cross-attention over object queries" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;fontSize=17;fontFamily=Noto Sans JP;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="250" y="425" width="400" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="box_head" value="Box head&lt;br&gt;xmin · ymin · xmax · ymax" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=17;fontFamily=Noto Sans JP;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="100" y="550" width="280" height="65" as="geometry"/>
+        </mxCell>
+        <mxCell id="class_head" value="Class head&lt;br&gt;60 object labels" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=17;fontFamily=Noto Sans JP;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="520" y="550" width="280" height="65" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
