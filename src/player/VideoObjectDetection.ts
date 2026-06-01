@@ -90,6 +90,12 @@ export class VideoObjectDetection {
       }
 
       this.detections = toGpuDetections(results);
+
+      const objectNames = [...new Set(results.map((r) => r.label))];
+      if (objectNames.length > 0) {
+        console.log('Detected objects:', objectNames);
+      }
+
       this.onDetectionsUpdated?.();
 
       if (this.options.onFpsUpdate && this.lastDetectionAt > 0) {
