@@ -4,6 +4,8 @@ import {pipeline, type ObjectDetectionOutput} from '@huggingface/transformers';
 import type {WorkerRequest, WorkerResponse} from './workerMessages';
 
 const MODEL_ID = 'onnx-community/rfdetr_medium-ONNX';
+/** RF-DETR preprocessor input size (see model preprocessor_config.json). */
+const MODEL_INPUT_SIZE = 576;
 
 type DetectFn = (
   input: OffscreenCanvas,
@@ -12,6 +14,23 @@ type DetectFn = (
 
 let detector: DetectFn | null = null;
 let loadPromise: Promise<void> | null = null;
+let preprocessCanvas: OffscreenCanvas | null = null;
+let preprocessCtx: OffscreenCanvasRenderingContext2D | null = null;
+
+function getPreprocessSurface(): {
+  canvas: OffscreenCanvas;
+  ctx: OffscreenCanvasRenderingContext2D;
+} {
+  if (!preprocessCanvas || !preprocessCtx) {
+    preprocessCanvas = new OffscreenCanvas(MODEL_INPUT_SIZE, MODEL_INPUT_SIZE);
+    const ctx = preprocessCanvas.getContext('2d', {willReadFrequently: true});
+    if (!ctx) {
+      throw new Error('OffscreenCanvas 2D context not available in worker');
+    }
+    preprocessCtx = ctx;
+  }
+  return {canvas: preprocessCanvas, ctx: preprocessCtx};
+}
 
 function post(message: WorkerResponse): void {
   self.postMessage(message);
@@ -56,17 +75,18 @@ async function runDetection(
   threshold: number,
 ): Promise<ObjectDetectionOutput> {
   const detect = await loadDetector();
-  const width = frame.displayWidth;
-  const height = frame.displayHeight;
-  const canvas = new OffscreenCanvas(width, height);
-  const ctx = canvas.getContext('2d', {willReadFrequently: true});
-  if (!ctx) {
-    frame.close();
-    throw new Error('OffscreenCanvas 2D context not available in worker');
-  }
+  const {canvas, ctx} = getPreprocessSurface();
 
   try {
-    ctx.drawImage(frame, 0, 0, width, height);
+    const bitmap = await createImageBitmap(frame, {
+      resizeWidth: MODEL_INPUT_SIZE,
+      resizeHeight: MODEL_INPUT_SIZE,
+    });
+    try {
+      ctx.drawImage(bitmap, 0, 0);
+    } finally {
+      bitmap.close();
+    }
   } finally {
     frame.close();
   }
