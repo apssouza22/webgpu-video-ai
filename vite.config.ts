@@ -12,7 +12,7 @@ export default defineConfig(({ command }) => ({
     outDir: 'docs',
   },
   server: {
-    port: 5180,
+    port: 5181,
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',

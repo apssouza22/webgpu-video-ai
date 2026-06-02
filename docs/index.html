@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Video processing with WebGPU</title>
+    <title>WebGPU video composition with real-time AI</title>
     <style>
       :root {
         color-scheme: dark;
@@ -87,9 +87,15 @@
         background: rgba(255, 255, 255, 0.04);
       }
       .detection-panel h2 {
-        margin: 0 0 12px;
+        margin: 0 0 8px;
         font-size: 1rem;
         font-weight: 700;
+      }
+      .detection-panel__hint {
+        margin: 0 0 12px;
+        color: #bdbdbd;
+        font-size: 0.92rem;
+        line-height: 1.5;
       }
       .detection-panel__row {
         display: flex;
@@ -111,20 +117,61 @@
       .detection-panel input[type='range'] {
         width: 160px;
       }
-      .detection-panel input[type='text'] {
-        flex: 1;
-        min-width: 200px;
-        padding: 8px 10px;
-        border: 1px solid #2b2b2b;
-        border-radius: 8px;
-        background: #0d1117;
-        color: #eee;
-        font: 13px/1.4 ui-monospace, monospace;
-      }
       #detection-fps {
         margin: 0;
         font: 13px/1.5 ui-monospace, monospace;
         color: #7eb8ff;
+      }
+      .ai-model-panel {
+        margin: 16px 0 0;
+        padding: 16px;
+        border: 1px solid #2b2b2b;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .ai-model-panel h2 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+        font-weight: 700;
+      }
+      .ai-model-panel label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        color: #d7d7d7;
+        font-size: 0.95rem;
+      }
+      .ai-model-panel select {
+        max-width: 420px;
+        padding: 8px 10px;
+        border: 1px solid #3a3a3a;
+        border-radius: 8px;
+        background: #1a1a1a;
+        color: #eee;
+        font: inherit;
+      }
+      .description-panel textarea,
+      .description-panel input[type='text'] {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        border: 1px solid #3a3a3a;
+        border-radius: 8px;
+        background: #1a1a1a;
+        color: #eee;
+        font: inherit;
+      }
+      #description-output {
+        margin: 12px 0 0;
+        padding: 12px;
+        min-height: 4rem;
+        border: 1px solid #2b2b2b;
+        border-radius: 8px;
+        background: #0d1117;
+        color: #c9d1d9;
+        font: 13px/1.55 ui-monospace, monospace;
+        white-space: pre-wrap;
       }
       .composition-player__controls {
         display: grid;
@@ -179,17 +226,21 @@
         color: #7eb8ff;
       }
     </style>
-    <script type="module" crossorigin src="/webgpu-video-ai/assets/index-uIjcvXjF.js"></script>
+    <script type="module" crossorigin src="/webgpu-video-ai/assets/index-DZ6Tc4Ce.js"></script>
   </head>
   <body>
     <main>
       <section class="hero" aria-labelledby="project-title">
-        <p class="eyebrow">WebGPU video processing experiment</p>
-        <h1 id="project-title">Video processing with WebGPU</h1>
+        <p class="eyebrow">WebGPU composition + browser AI</p>
+        <h1 id="project-title">WebGPU video with browser AI</h1>
         <p class="intro">
-          This project explores browser-native video composition using WebGPU for
-          high-performance layer rendering. It previews a timeline with multiple
-          video, image, and audio layers decoded with MediaBunny.
+          A browser-native pipeline that decodes video with MediaBunny, composites layers on the
+          GPU with WebGPU, and runs AI on WebGPU inside dedicated workers. Choose
+          <a href="https://huggingface.co/onnx-community/rfdetr_medium-ONNX">RF-DETR</a> for
+          real-time object detection, or
+          <a href="https://huggingface.co/HuggingFaceTB/SmolVLM-500M-Instruct">SmolVLM</a> to
+          describe the current frame. Decoded <code>VideoFrame</code>s are transferred to workers
+          with no canvas readback.
         </p>
         <ul class="pipeline" aria-label="Video processing pipeline">
           <li>
@@ -197,31 +248,55 @@
             <span>Video and audio tracks are decoded in the browser with MediaBunny.</span>
           </li>
           <li>
-            <strong>Compose on GPU</strong>
-            <span>Video frames and image overlays are rendered with WebGPU.</span>
+            <strong>Transfer frames</strong>
+            <span>Each preview frame clones the decoded VideoFrame and posts it to the worker.</span>
           </li>
           <li>
-            <strong>Detect objects</strong>
-            <span>RF-DETR runs on each decoded VideoFrame in a worker; boxes are drawn in WebGPU.</span>
+            <strong>Run AI on WebGPU</strong>
+            <span>RF-DETR or SmolVLM in a worker; inference stays off the main thread.</span>
+          </li>
+          <li>
+            <strong>Compose on GPU</strong>
+            <span>Video, image overlays, then detection boxes — all in WebGPU passes.</span>
           </li>
           <li>
             <strong>Preview timeline</strong>
-            <span>Use play, pause, and the scrubber to explore the composition.</span>
+            <span>Play, pause, and scrub; render and detection FPS are shown live.</span>
           </li>
         </ul>
       </section>
       <section class="composition-code" aria-labelledby="composition-code-title">
         <h2 id="composition-code-title">Demo composition</h2>
-        <p>The preview below uses this timeline (1280×720, 30 fps):</p>
+        <p>
+          The preview below uses this timeline (1280×720, 30 fps): one video with audio, plus two
+          transparent PNG overlays from 1s to 3s.
+        </p>
         <pre><code>export const DEMO_COMPOSITION = new Composition(30, 1280, 720)
-  .addLayer(new VideoClip(demoAssetUrl('samples/video.mp4'), 0, 5))
-  .addLayer(new AudioClip(demoAssetUrl('samples/video.mp4'), 0, 5))
+  .addLayer(new VideoClip(demoAssetUrl('samples/video.mp4'), 0))
+  .addLayer(new AudioClip(demoAssetUrl('samples/video.mp4'), 0))
   .addLayer(new ImageClip(demoAssetUrl('samples/overlay.png'), 1, 3, 0.62, 0.08, 0.32, 0.32, 0.92))
   .addLayer(new ImageClip(demoAssetUrl('samples/overlay-2.png'), 1, 3, 0, 0.08, 0.32, 0.32, 0.92));</code></pre>
       </section>
       <div id="player"></div>
-      <section class="detection-panel" aria-labelledby="detection-panel-title">
-        <h2 id="detection-panel-title">Object detection (RF-DETR)</h2>
+      <section class="ai-model-panel" aria-labelledby="ai-model-panel-title">
+        <h2 id="ai-model-panel-title">AI model</h2>
+        <label for="model-select">
+          Model
+          <select id="model-select" aria-label="AI model to run on video frames"></select>
+        </label>
+      </section>
+      <section
+        id="detection-panel"
+        class="detection-panel"
+        aria-labelledby="detection-panel-title"
+      >
+        <h2 id="detection-panel-title">Object detection (RF-DETR · WebGPU)</h2>
+        <p class="detection-panel__hint">
+          Model: <code>onnx-community/rfdetr_medium-ONNX</code> via
+          <code>@huggingface/transformers</code> with <code>device: 'webgpu'</code>. Detection runs
+          on the decoded video frame (before image overlays). Only one inference runs at a time;
+          newer frames replace pending work while inference is busy.
+        </p>
         <div class="detection-panel__row">
           <label>
             <input id="detection-enabled" type="checkbox" checked />
@@ -234,6 +309,35 @@
           </label>
           <p id="detection-fps">Render FPS: — · Detection FPS: —</p>
         </div>
+      </section>
+      <section
+        id="description-panel"
+        class="detection-panel description-panel"
+        hidden
+        aria-labelledby="description-panel-title"
+      >
+        <h2 id="description-panel-title">Video description (SmolVLM · WebGPU)</h2>
+        <p class="detection-panel__hint">
+          Model: <code>HuggingFaceTB/SmolVLM-500M-Instruct</code> with quantized vision/decoder
+          weights on WebGPU. Description runs on the decoded video frame (before image overlays) in
+          a worker — only one inference at a time; newer frames replace pending work while busy.
+        </p>
+        <div class="detection-panel__row">
+          <label>
+            <input id="description-enabled" type="checkbox" checked />
+            Enable description
+          </label>
+          <label for="description-instruction">
+            Instruction
+            <input
+              id="description-instruction"
+              type="text"
+              value="What do you see in this video frame?"
+            />
+          </label>
+          <p id="description-fps">Render FPS: — · Description FPS: —</p>
+        </div>
+        <p id="description-output" aria-live="polite">—</p>
       </section>
       <p id="status">Initializing…</p>
     </main>

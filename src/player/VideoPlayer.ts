@@ -3,18 +3,21 @@ import {GpuCompositor, type VideoLayerInput} from '../gpu/GpuCompositor';
 import {PlayerCanvas} from '../gpu/PlayerCanvas';
 import type {DecodedVideoFrame} from '../media/VideoFrameSource';
 import type {ImageClip, VideoFrameContext, VideoLayerClip} from '../types';
+import type {VideoFrameDescription} from './VideoFrameDescription';
 import type {VideoObjectDetection} from './VideoObjectDetection';
 
 export class VideoPlayer {
   private readonly playerCanvas: PlayerCanvas;
   private readonly gpuCompositor: GpuCompositor;
   private readonly imageLayers: readonly ImageClip[];
-  private readonly detection: VideoObjectDetection;
+  private readonly detection: VideoObjectDetection | null;
+  private readonly description: VideoFrameDescription | null;
   private renderVersion = 0;
 
   static async create(
     composition: Composition,
-    detection: VideoObjectDetection,
+    detection: VideoObjectDetection | null,
+    description: VideoFrameDescription | null,
   ): Promise<VideoPlayer> {
     if (!navigator.gpu) {
       throw new Error('WebGPU is not available');
@@ -30,19 +33,21 @@ export class VideoPlayer {
     playerCanvas.init(device, composition.width, composition.height);
     const compositor = await GpuCompositor.create(device, playerCanvas.getFormat());
 
-    return new VideoPlayer(composition, playerCanvas, compositor, detection);
+    return new VideoPlayer(composition, playerCanvas, compositor, detection, description);
   }
 
   private constructor(
     private readonly composition: Composition,
     playerCanvas: PlayerCanvas,
     compositor: GpuCompositor,
-    detection: VideoObjectDetection,
+    detection: VideoObjectDetection | null,
+    description: VideoFrameDescription | null,
   ) {
     this.playerCanvas = playerCanvas;
     this.gpuCompositor = compositor;
     this.imageLayers = composition.imageLayers;
     this.detection = detection;
+    this.description = description;
   }
 
   getCanvas(): HTMLCanvasElement {
@@ -71,10 +76,35 @@ export class VideoPlayer {
     await this.render(time, renderDuration);
   }
 
+  async warmupDescription(time = 0, duration?: number): Promise<void> {
+    if (!this.description) {
+      return;
+    }
+
+    const renderDuration = duration ?? this.composition.duration;
+    const frameContext = this.composition.getFrameContextAtTime(time);
+    const decodedVideos = await this.decodeVideoLayers(frameContext);
+    if (decodedVideos.length === 0) {
+      return;
+    }
+
+    try {
+      const descriptionFrame = new VideoFrame(decodedVideos[0].sourceFrame.frame);
+      await this.description.warmup(
+        descriptionFrame,
+        this.description.getInstruction(),
+      );
+    } finally {
+      this.closeDecodedVideos(decodedVideos);
+    }
+
+    await this.render(time, renderDuration);
+  }
+
   async render(
     time: number,
     duration: number,
-    options: {skipDetection?: boolean} = {},
+    options: {skipInference?: boolean} = {},
   ): Promise<void> {
     const renderVersion = ++this.renderVersion;
     const renderTime = Math.min(time, Math.max(0, duration - 0.001));
@@ -96,8 +126,10 @@ export class VideoPlayer {
         return;
       }
 
-      if (!options.skipDetection && decodedVideos.length > 0) {
-        this.detection?.schedule(decodedVideos[0].sourceFrame.frame);
+      if (!options.skipInference && decodedVideos.length > 0) {
+        const sourceFrame = decodedVideos[0].sourceFrame.frame;
+        this.detection?.schedule(sourceFrame);
+        this.description?.schedule(sourceFrame);
       }
 
       await this.gpuCompositor.renderFrame(this.playerCanvas.getContext(), {

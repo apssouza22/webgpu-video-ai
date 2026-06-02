@@ -7,7 +7,7 @@ type PendingRequest = {
   reject: (error: Error) => void;
 };
 
-export class ObjectDetector {
+export class ObjectDetectorService {
   private readonly worker: Worker;
   private readonly pending = new Map<number, PendingRequest>();
   private nextId = 0;
@@ -36,11 +36,11 @@ export class ObjectDetector {
     this.worker.postMessage({type: 'init'} satisfies WorkerRequest);
   }
 
-  static async create(onStatus?: (message: string) => void): Promise<ObjectDetector> {
+  static async create(onStatus?: (message: string) => void): Promise<ObjectDetectorService> {
     const worker = new Worker(new URL('./detection.worker.ts', import.meta.url), {
       type: 'module',
     });
-    const detector = new ObjectDetector(worker, onStatus);
+    const detector = new ObjectDetectorService(worker, onStatus);
     await detector.ready;
     return detector;
   }

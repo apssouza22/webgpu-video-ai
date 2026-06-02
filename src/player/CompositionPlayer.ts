@@ -1,6 +1,7 @@
 import type {Composition} from '../composition';
 import {AudioPlayer} from './AudioPlayer';
 import {VideoPlayer} from './VideoPlayer';
+import type {VideoFrameDescription} from './VideoFrameDescription';
 import type {VideoObjectDetection} from './VideoObjectDetection';
 
 export interface CompositionPlayerOptions {
@@ -11,7 +12,8 @@ export class CompositionPlayer {
   private readonly root: HTMLElement;
   private readonly videoPlayer: VideoPlayer;
   private readonly audioPlayer: AudioPlayer;
-  private readonly detection: VideoObjectDetection;
+  private readonly detection: VideoObjectDetection | null;
+  private readonly description: VideoFrameDescription | null;
   private readonly onRenderFpsUpdate?: (fps: number) => void;
   private playButton!: HTMLButtonElement;
   private scrubber!: HTMLInputElement;
@@ -26,10 +28,11 @@ export class CompositionPlayer {
   static async create(
     composition: Composition,
     container: HTMLElement,
-    detection: VideoObjectDetection,
+    detection: VideoObjectDetection | null,
+    description: VideoFrameDescription | null,
     options: CompositionPlayerOptions = {},
   ): Promise<CompositionPlayer> {
-    const videoPlayer = await VideoPlayer.create(composition, detection);
+    const videoPlayer = await VideoPlayer.create(composition, detection, description);
 
     try {
       const audioPlayer = await AudioPlayer.create(composition.audioLayers);
@@ -39,6 +42,7 @@ export class CompositionPlayer {
         videoPlayer,
         audioPlayer,
         detection,
+        description,
         options,
       );
     } catch (error) {
@@ -52,12 +56,14 @@ export class CompositionPlayer {
     container: HTMLElement,
     videoPlayer: VideoPlayer,
     audioPlayer: AudioPlayer,
-    detection: VideoObjectDetection,
+    detection: VideoObjectDetection | null,
+    description: VideoFrameDescription | null,
     options: CompositionPlayerOptions,
   ) {
     this.videoPlayer = videoPlayer;
     this.audioPlayer = audioPlayer;
     this.detection = detection;
+    this.description = description;
     this.onRenderFpsUpdate = options.onRenderFpsUpdate;
     this.root = document.createElement('div');
     this.root.className = 'composition-player';
@@ -76,15 +82,19 @@ export class CompositionPlayer {
     return this.videoPlayer;
   }
 
-  getDetection(): VideoObjectDetection  {
+  getDetection(): VideoObjectDetection | null {
     return this.detection;
+  }
+
+  getDescription(): VideoFrameDescription | null {
+    return this.description;
   }
 
   getVideoCanvas(): HTMLCanvasElement {
     return this.videoPlayer.getCanvas();
   }
 
-  async refreshFrame(options: {skipDetection?: boolean} = {}): Promise<void> {
+  async refreshFrame(options: {skipInference?: boolean} = {}): Promise<void> {
     const startedAt = performance.now();
     this.updateControls();
     await this.videoPlayer.render(this.currentTime, this.duration, options);
@@ -107,6 +117,7 @@ export class CompositionPlayer {
     this.audioPlayer.destroy();
     this.videoPlayer.destroy();
     this.detection?.destroy();
+    this.description?.destroy();
   }
 
   private createControls(): HTMLElement {

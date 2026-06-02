@@ -1,6 +1,6 @@
 import type {GpuDetectionBox} from '../detection/gpuDetection';
 import {toGpuDetections} from '../detection/gpuDetection';
-import type {ObjectDetector} from '../detection/ObjectDetector';
+import type {ObjectDetectorService} from '../detection/ObjectDetectorService';
 
 export interface ObjectDetectionOptions {
   threshold?: number;
@@ -20,7 +20,7 @@ export class VideoObjectDetection {
   private onDetectionsUpdated?: () => void;
 
   constructor(
-    private readonly detector: ObjectDetector,
+    private readonly detector: ObjectDetectorService,
     private readonly options: ObjectDetectionOptions,
   ) {
     this.enabled = options.enabled ?? true;

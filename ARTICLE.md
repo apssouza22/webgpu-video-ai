@@ -135,7 +135,7 @@ Isolating the model inside a Worker gives you three critical properties:
 A 1280×720 frame at 4 bytes per pixel is 3.5 MB. Copying that on every frame would add ~100 MB/s of memory bandwidth overhead — the zero-copy transfer makes the overhead negligible:
 
 ```typescript
-// ObjectDetector.ts — main thread
+// ObjectDetectorService.ts — main thread
 this.worker.postMessage(
   { type: 'detect', id, threshold, frame },
   [frame],   // ← transfer list: frame is moved, not copied
@@ -151,10 +151,10 @@ The worker communicates through a narrow, explicitly typed protocol defined in [
 
 *Source: [worker-protocol.drawio](./assets/diagrams/worker-protocol.drawio)*
 
-The numeric `id` field is essential: it matches each response to its originating request. The `ObjectDetector` class on the main thread stores pending promises in a `Map<id, {resolve, reject}>`:
+The numeric `id` field is essential: it matches each response to its originating request. The `ObjectDetectorService` class on the main thread stores pending promises in a `Map<id, {resolve, reject}>`:
 
 ```typescript
-// ObjectDetector.ts
+// ObjectDetectorService.ts
 async detect(frame: VideoFrame, options: { threshold: number }): Promise<DetectionResult[]> {
   const id = this.nextId++;
   return new Promise((resolve, reject) => {

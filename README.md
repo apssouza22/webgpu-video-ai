@@ -32,7 +32,7 @@ Composition (timeline)
   → CompositionPlayer
     → VideoPlayer — MediaBunny decode, GpuCompositor render
     → VideoObjectDetection — clones VideoFrame, transfers to worker
-    → ObjectDetector / detection.worker — RF-DETR on WebGPU
+    → ObjectDetectorService / detection.worker — RF-DETR on WebGPU
     → GpuDetectionRenderer — box overlay in WebGPU
 ```
 

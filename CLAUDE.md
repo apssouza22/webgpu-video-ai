@@ -28,7 +28,7 @@ Composition (timeline definition)
           GpuImageRenderer   — cached rgba8unorm 2D textures
           GpuDetectionRenderer — bounding boxes via uniform buffer
     → AudioPlayer (Web Audio API, pre-decoded buffers)
-    → VideoObjectDetection → ObjectDetector (Web Worker, RF-DETR via Transformers.js)
+    → VideoObjectDetection → ObjectDetectorService (Web Worker, RF-DETR via Transformers.js)
 ```
 
 ### Key modules
